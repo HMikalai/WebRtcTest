@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/localSurfaceViewRenderer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center" />
+
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/remoteSurfaceViewRenderer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone"/>
+
+    <Button
+        android:id="@+id/start_preview"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center"
+        android:layout_marginBottom="20dp"
+        android:elevation="30dp"
+        android:text="@string/text_start_preview"
+        tools:visibility="visible"/>
+
+    <LinearLayout
+        android:id="@+id/connection_control"
+        android:orientation="vertical"
+        android:elevation="10dp"
+        android:visibility="gone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:id="@+id/live_stream_id"
+            android:background="#4DADDAD3"
+            android:textSize="30sp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            tools:ignore="Autofill,LabelFor,TextFields" />
+
+        <Button
+            android:id="@+id/start_stream"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/text_start_stream" />
+
+        <Button
+            android:id="@+id/connect_to_stream"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/text_connect_to_stream" />
+
+        <Button
+            android:id="@+id/close_websocket"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/text_close_websocket" />
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/change_camera"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|bottom"
+        android:layout_marginBottom="20dp"
+        android:text="@string/text_change_camera"
+        android:visibility="gone"
+        tools:visibility="gone" />
+
+</FrameLayout>
