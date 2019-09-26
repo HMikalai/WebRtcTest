@@ -70,8 +70,6 @@ public class PeerConnectionEvents {
     private void send(Message message) {
         if (isConnected) {
             String json = gson.toJson(message);
-            Log.d("HMfilterOkHttp", "PeerConnectionEvents#send messageId: " + message.getType());
-            Log.d("HMfilterOkHttp", "PeerConnectionEvents#send json: " + json);
             webSocketConnection.sendMessage(json);
         } else if (listener != null) {
             listener.notConnected();
@@ -94,8 +92,6 @@ public class PeerConnectionEvents {
         @Override
         public void onMessage(String json) {
             Message message = gson.fromJson(json, Message.class);
-            Log.d("HMfilterOkHttp", "ConnectionListener#onMessage messageId: " + message.getType());
-            Log.d("HMfilterOkHttp", "ConnectionListener#onMessage json: " + json);
             switch (message.getType()) {
                 case MessageDataType.PRESENTER_RESPONSE:
                 case MessageDataType.VIEWER_RESPONSE:
@@ -117,13 +113,11 @@ public class PeerConnectionEvents {
 
         @Override
         public void onRemoteClosing() {
-            Log.d("HMfilterOkHttp", "ConnectionListener#onRemoteClosing");
             isConnected = false;
         }
 
         @Override
         public void onClosed() {
-            Log.d("HMfilterOkHttp", "ConnectionListener#onClosed");
             isConnected = false;
             if (needReconnect) {
                 needReconnect = false;
@@ -133,7 +127,6 @@ public class PeerConnectionEvents {
 
         @Override
         public void onErrorClosed(Throwable t) {
-            Log.d("HMfilterOkHttp", "ConnectionListener#onErrorClosed Throwable: " + t.toString());
             isConnected = false;
         }
     }

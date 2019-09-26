@@ -70,7 +70,6 @@ public class WebSocketConnection {
 
         @Override
         public void onMessage(WebSocket webSocket, ByteString bytes) {
-            Log.d("HMfilterOkHttp", "EchoWebSocketListener#onMessage with ByteString");
         }
 
         @Override
