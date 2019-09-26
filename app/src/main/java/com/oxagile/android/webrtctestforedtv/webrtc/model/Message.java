@@ -2,11 +2,13 @@ package com.oxagile.android.webrtctestforedtv.webrtc.model;
 
 import com.google.gson.annotations.SerializedName;
 import com.oxagile.android.webrtctestforedtv.webrtc.constants.MessageDataType;
+import com.oxagile.android.webrtctestforedtv.webrtc.constants.Role;
 
 public class Message {
-
+    //MessageDataType:
     @SerializedName("id")
     private String type;
+
     //MessageDataType.PRESENTER or MessageDataType.VIEWER
     @SerializedName("sdpOffer")
     private String sdpOffer;
@@ -14,9 +16,11 @@ public class Message {
     private String userId;
     @SerializedName("liveStreamId")
     private String liveStreamId;
+
     //MessageDataType.PRESENTER_RESPONSE or MessageDataType.VIEWER_RESPONSE
     @SerializedName("sdpAnswer")
     private String sdpAnswer;
+
     //MessageDataType.ICE_CANDIDATE
     @SerializedName("candidate")
     private Candidate candidate;
@@ -24,7 +28,7 @@ public class Message {
     public Message() {
     }
 
-    public Message(@MessageDataType String type, String sdpOffer, String userId, String liveStreamId) {
+    public Message(@Role String type, String sdpOffer, String userId, String liveStreamId) {
         this.type = type;
         this.sdpOffer = sdpOffer;
         this.userId = userId;
@@ -38,18 +42,6 @@ public class Message {
 
     public String getType() {
         return type;
-    }
-
-    public String getSdpOffer() {
-        return sdpOffer;
-    }
-
-    public String getUserId() {
-        return userId;
-    }
-
-    public String getLiveStreamId() {
-        return liveStreamId;
     }
 
     public String getSdpAnswer() {

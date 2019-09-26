@@ -2,7 +2,8 @@
     <string name="app_name">WebRtcTestForEdtv</string>
     <string name="text_continue">Continue</string>
     <string name="explanation_of_permission_request">This app needs access to your camera and mic to make video calls</string>
-    <string name="text_start_preview">Start preview</string>
+    <string name="text_presenter">Presenter</string>
+    <string name="text_viewer">Viewer</string>
     <string name="text_change_camera">Change camera</string>
     <string name="text_start_stream">Start stream</string>
     <string name="text_connect_to_stream">Connect to stream</string>

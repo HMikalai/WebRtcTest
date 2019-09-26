@@ -19,69 +19,93 @@ import org.webrtc.SurfaceViewRenderer;
 public class MainActivity extends AppCompatActivity {
 
     private PeerConnectionClient peerConnectionClient;
-    private Button startPreview;
+
+    private Button startLikePresenter;
+    private Button startLikeViewer;
+
     private Button changeCamera;
     private LinearLayout connectionControl;
     private EditText liveStreamId;
+    private Button startStream;
+    private Button connectToStream;
 
-    private SurfaceViewRenderer localSurfaceViewRenderer;
-    private SurfaceViewRenderer remoteSurfaceViewRenderer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        startWedRtc();
+        startLikePresenter = findViewById(R.id.start_like_presenter);
+        startLikePresenter.setOnClickListener(v -> startLikePresenter());
 
-        startPreview = findViewById(R.id.start_preview);
-        startPreview.setOnClickListener(v -> peerConnectionClient.startPreviewFromLocalCamera());
+        startLikeViewer = findViewById(R.id.start_like_viewer);
+        startLikeViewer.setOnClickListener(v -> startLikeViewer());
 
         changeCamera = findViewById(R.id.change_camera);
-        changeCamera.setOnClickListener(v -> peerConnectionClient.changeCamera());
+//        changeCamera.setOnClickListener(v -> peerConnectionClient.changeCamera());
 
         connectionControl = findViewById(R.id.connection_control);
         liveStreamId = findViewById(R.id.live_stream_id);
 
-        Button startStream = findViewById(R.id.start_stream);
+        startStream = findViewById(R.id.start_stream);
         startStream.setOnClickListener(v -> startStream());
 
-        Button connectToStream = findViewById(R.id.connect_to_stream);
+        connectToStream = findViewById(R.id.connect_to_stream);
         connectToStream.setOnClickListener(v -> connectToStream());
 
         Button closeWebSocket = findViewById(R.id.close_websocket);
         closeWebSocket.setOnClickListener(v -> peerConnectionClient.closeConnection());
 
+        SurfaceViewRenderer localSurfaceViewRenderer = findViewById(R.id.localSurfaceViewRenderer);
+        SurfaceViewRenderer remoteSurfaceViewRenderer = findViewById(R.id.remoteSurfaceViewRenderer);
+        startWedRtc(localSurfaceViewRenderer, remoteSurfaceViewRenderer);
     }
 
-    private void startWedRtc() {
-        this.localSurfaceViewRenderer = findViewById(R.id.localSurfaceViewRenderer);
-        this.remoteSurfaceViewRenderer = findViewById(R.id.remoteSurfaceViewRenderer);
+    private void startLikePresenter(){
+        startLikePresenter.setVisibility(View.GONE);
+        startLikeViewer.setVisibility(View.GONE);
+        connectToStream.setVisibility(View.GONE);
+        changeCamera.setVisibility(View.VISIBLE);
+        connectionControl.setVisibility(View.VISIBLE);
+
+        peerConnectionClient.startLikePresenter();
+    }
+
+    private void startLikeViewer(){
+        startLikePresenter.setVisibility(View.GONE);
+        startLikeViewer.setVisibility(View.GONE);
+        startStream.setVisibility(View.GONE);
+        changeCamera.setVisibility(View.VISIBLE);
+        connectionControl.setVisibility(View.VISIBLE);
+
+        peerConnectionClient.startLikeViewer();
+    }
+
+    private void startWedRtc(SurfaceViewRenderer localSurfaceViewRenderer, SurfaceViewRenderer remoteSurfaceViewRenderer) {
         peerConnectionClient = new PeerConnectionClient(localSurfaceViewRenderer, remoteSurfaceViewRenderer, new PeerConnectionClient.PeerConnectionClientListener() {
             @Override
             public void onLocalVideoCapturerStarted() {
                 runOnUiThread(() -> {
-                    startPreview.setVisibility(View.GONE);
-                    changeCamera.setVisibility(View.VISIBLE);
-                    connectionControl.setVisibility(View.VISIBLE);
+//                    changeCamera.setVisibility(View.VISIBLE);
+//                    connectionControl.setVisibility(View.VISIBLE);
                 });
             }
 
             @Override
             public void onLocalVideoCapturerStopped() {
                 runOnUiThread(() -> {
-                    startPreview.setVisibility(View.VISIBLE);
-                    changeCamera.setVisibility(View.GONE);
-                    connectionControl.setVisibility(View.GONE);
+//                    changeCamera.setVisibility(View.GONE);
+//                    connectionControl.setVisibility(View.GONE);
                 });
             }
         });
     }
 
+
     private void startStream() {
         String strLiveStreamId = liveStreamId.getText().toString();
         if (!TextUtils.isEmpty(strLiveStreamId)) {
-            peerConnectionClient.startStream(strLiveStreamId);
+            peerConnectionClient.connect(strLiveStreamId);
         }
         hideKeyboard(liveStreamId);
     }
@@ -89,11 +113,9 @@ public class MainActivity extends AppCompatActivity {
     private void connectToStream() {
         String strLiveStreamId = liveStreamId.getText().toString();
         if (!TextUtils.isEmpty(strLiveStreamId)) {
-            peerConnectionClient.connectToStream(strLiveStreamId);
+            peerConnectionClient.connect(strLiveStreamId);
         }
         hideKeyboard(liveStreamId);
-        localSurfaceViewRenderer.setVisibility(View.GONE);
-        remoteSurfaceViewRenderer.setVisibility(View.VISIBLE);
     }
 
     public static void hideKeyboard(@Nullable View view) {

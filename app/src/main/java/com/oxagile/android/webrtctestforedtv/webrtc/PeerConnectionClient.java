@@ -3,8 +3,7 @@ package com.oxagile.android.webrtctestforedtv.webrtc;
 import android.content.Context;
 import android.util.Log;
 
-import androidx.annotation.IntDef;
-
+import com.oxagile.android.webrtctestforedtv.webrtc.constants.ConnectionType;
 import com.oxagile.android.webrtctestforedtv.webrtc.model.Candidate;
 
 import org.webrtc.AudioSource;
@@ -33,13 +32,9 @@ import org.webrtc.VideoFrame;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import static org.webrtc.SessionDescription.Type.ANSWER;
 
@@ -66,7 +61,7 @@ public class PeerConnectionClient {
     private AudioTrack audioTrack;
 
     private PeerConnection peerConnection;
-    private int connectionType;
+    private ConnectionType connectionType;
     private String liveStreamId;
 
     private PeerConnectionEvents connectionEvents = PeerConnectionEvents.getInstance();
@@ -75,9 +70,9 @@ public class PeerConnectionClient {
 
     private final MediaConstraints mediaConstraints = new MediaConstraints();
 
-    private static final ExecutorService executor = Executors.newSingleThreadExecutor();
-
-    public PeerConnectionClient(SurfaceViewRenderer localSurfaceViewRenderer, SurfaceViewRenderer remoteSurfaceViewRenderer, PeerConnectionClientListener peerConnectionClientListener) {
+    public PeerConnectionClient(SurfaceViewRenderer localSurfaceViewRenderer,
+                                SurfaceViewRenderer remoteSurfaceViewRenderer,
+                                PeerConnectionClientListener peerConnectionClientListener) {
         Context context = null;
         if (localSurfaceViewRenderer != null && localSurfaceViewRenderer.getContext() != null) {
             context = localSurfaceViewRenderer.getContext();
@@ -102,7 +97,14 @@ public class PeerConnectionClient {
         connectionEvents.setListener(new ConnectionListener());
     }
 
-    public void startPreviewFromLocalCamera() {
+    public void startLikePresenter() {
+        connectionType = ConnectionType.PRESENTER;
+        createLocalVideoTrack(localSurfaceViewRenderer);//here preview will be start
+        createLocalAudioTrack();
+    }
+
+    public void startLikeViewer() {
+        connectionType = ConnectionType.VIEWER;
         createLocalVideoTrack(localSurfaceViewRenderer);//here preview will be start
         createLocalAudioTrack();
     }
@@ -113,15 +115,14 @@ public class PeerConnectionClient {
         createLocalVideoTrack(localSurfaceViewRenderer);
     }
 
-    public void startStream(String liveStreamId) {
-        createPeerConnection(ConnectionType.PRESENTER, liveStreamId);
-    }
-
-    public void connectToStream(String liveStreamId) {
-        createPeerConnection(ConnectionType.VIEWER, liveStreamId);
+    public void connect(String liveStreamId) {
+        this.liveStreamId = liveStreamId;
+        createPeerConnection();
     }
 
     public void closeConnection() {
+        peerConnection.close();
+        peerConnection.dispose();
         connectionEvents.closeConnection();
     }
 
@@ -136,8 +137,8 @@ public class PeerConnectionClient {
 
     private void createPeerConnectionFactory() {
         PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
-        options.disableEncryption = false;
-        options.disableNetworkMonitor = false;
+//        options.disableEncryption = false;
+//        options.disableNetworkMonitor = false;
 
         //specify the video codecs
         this.peerConnectionFactory = PeerConnectionFactory.builder()
@@ -152,12 +153,13 @@ public class PeerConnectionClient {
             localSurfaceViewRenderer.setMirror(true);
             localSurfaceViewRenderer.setEnableHardwareScaler(true);
             localSurfaceViewRenderer.init(rootEglBase.getEglBaseContext(), null); //rendererEvents
+            Log.d("HMfilterOkHttp", "initSurfaceViews - localSurfaceViewRenderer");
         }
 
         if (remoteSurfaceViewRenderer != null) {
-            remoteSurfaceViewRenderer.setMirror(true);
             remoteSurfaceViewRenderer.setEnableHardwareScaler(true);
             remoteSurfaceViewRenderer.init(rootEglBase.getEglBaseContext(), null); //rendererEvents
+            Log.d("HMfilterOkHttp", "initSurfaceViews - remoteSurfaceViewRenderer");
         }
     }
 
@@ -169,9 +171,9 @@ public class PeerConnectionClient {
         videoCapturer = Utils.createVideoCapture(appContext, frontCamera);//choosing of front/back camera is here
         videoCapturer.initialize(surfaceTextureHelper, appContext, new VideoCaptureObserver(localVideoSource.getCapturerObserver()));
 
-//        videoCapturer.startCapture(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);//////////////////////////////////////////////////////////////////////////////////////////////////////
-        videoCapturer.changeCaptureFormat(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);
-        String localVideoTrackId = LOCAL_VIDEO_TRACK_ID + UUID.randomUUID().toString();
+        videoCapturer.startCapture(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);//////////////////////////////////////////////////////////////////////////////////////////////////////
+//        videoCapturer.changeCaptureFormat(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);
+        String localVideoTrackId = LOCAL_VIDEO_TRACK_ID + "_" + connectionType.name();
         videoTrack = peerConnectionFactory.createVideoTrack(localVideoTrackId, localVideoSource);
         videoTrack.addSink(surfaceViewRenderer);
     }
@@ -193,15 +195,28 @@ public class PeerConnectionClient {
 
     private void createLocalAudioTrack() {
         AudioSource audioSource = peerConnectionFactory.createAudioSource(mediaConstraints);
-        String localVideoTrackId = LOCAL_AUDIO_TRACK_ID + UUID.randomUUID().toString();
+        String localVideoTrackId = LOCAL_AUDIO_TRACK_ID + "_" + connectionType.name();
         audioTrack = peerConnectionFactory.createAudioTrack(localVideoTrackId, audioSource);
     }
 
-    private void createPeerConnection(@ConnectionType int type, String liveStreamId) {
-        PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(Utils.getIceServers());
-        peerConnection = peerConnectionFactory.createPeerConnection(rtcConfig, new PeerConnectionObserver());
+    private void createPeerConnection() {
+        peerConnection = peerConnectionFactory.createPeerConnection(Utils.getIceServers(), new PeerConnectionObserver(){
+            @Override
+            public void onIceCandidate(IceCandidate iceCandidate) {
+                Log.d("HMfilterOkHttp", "PeerConnectionObserver#onIceCandidate");
+                connectionEvents.onIceCandidate(iceCandidate);
+            }
 
-        String labelOfLocalMediaStream = LABEL_OF_LOCAL_MEDIA_STREAM + UUID.randomUUID().toString();
+            @Override
+            public void onAddStream(MediaStream mediaStream) {
+                if (mediaStream != null && remoteSurfaceViewRenderer != null) {
+                    Log.d("HMfilterOkHttp", "PeerConnectionObserver#onAddStream");
+                    mediaStream.videoTracks.get(0).addSink(remoteSurfaceViewRenderer);
+                }
+            }
+        });
+
+        String labelOfLocalMediaStream = LABEL_OF_LOCAL_MEDIA_STREAM + "_" + connectionType.name();
         MediaStream localMediaStream = peerConnectionFactory.createLocalMediaStream(labelOfLocalMediaStream);
 
         localMediaStream.addTrack(videoTrack);
@@ -209,10 +224,40 @@ public class PeerConnectionClient {
 
         if (peerConnection != null) {
             peerConnection.addStream(localMediaStream);
-            this.connectionType = type;
-            this.liveStreamId = liveStreamId;
             connectionEvents.connect(null);
         }
+    }
+
+    private void createOffer() {
+        peerConnection.createOffer(new SimpleSdpObserver(){
+            @Override
+            public void onCreateSuccess(SessionDescription sessionDescription) {
+                setLocalDescription(sessionDescription);
+            }
+        }, mediaConstraints);
+    }
+
+    private void setLocalDescription(SessionDescription sessionDescription) {
+        peerConnection.setLocalDescription(new SimpleSdpObserver(){
+            @Override
+            public void onSetSuccess() {
+                sendLocalDescription();
+            }
+        }, sessionDescription);
+    }
+
+    private void setRemoteDescription(String remoteSdp) {
+        peerConnection.setRemoteDescription(new SimpleSdpObserver(), new SessionDescription(ANSWER, remoteSdp));
+        Log.d("HMfilterOkHttp", "Remote #SDP: " + remoteSdp);
+    }
+
+    private void sendLocalDescription() {
+        if (connectionType == ConnectionType.PRESENTER) {
+            connectionEvents.onPresenterSdp(peerConnection.getLocalDescription().description, liveStreamId);
+        } else if (connectionType == ConnectionType.VIEWER) {
+            connectionEvents.onViewerSdp(peerConnection.getLocalDescription().description, liveStreamId);
+        }
+        Log.d("HMfilterOkHttp", "Local #SDP: " + peerConnection.getLocalDescription().description);
     }
 
     private static class Utils {
@@ -300,117 +345,77 @@ public class PeerConnectionClient {
     private class PeerConnectionObserver implements PeerConnection.Observer {
         @Override
         public void onSignalingChange(PeerConnection.SignalingState signalingState) {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onSignalingChange");
         }
 
         @Override
         public void onIceConnectionChange(PeerConnection.IceConnectionState iceConnectionState) {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onIceConnectionChange");
         }
 
         @Override
         public void onConnectionChange(PeerConnection.PeerConnectionState newState) {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onConnectionChange newState: " + newState.toString());
         }
 
         @Override
         public void onIceConnectionReceivingChange(boolean b) {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onIceConnectionReceivingChange");
         }
 
         @Override
         public void onIceGatheringChange(PeerConnection.IceGatheringState iceGatheringState) {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onIceGatheringChange");
         }
 
         @Override
         public void onIceCandidate(IceCandidate iceCandidate) {
-            Log.d("HMfilterOkHttp", "send iceCandidate");
-            connectionEvents.onIceCandidate(iceCandidate);
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onIceCandidate");
         }
 
         @Override
         public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onIceCandidatesRemoved");
         }
 
         @Override
         public void onAddStream(MediaStream mediaStream) {
-            if (remoteSurfaceViewRenderer != null) {
-                mediaStream.videoTracks.get(0).addSink(remoteSurfaceViewRenderer);
-            }
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onAddStream");
         }
 
         @Override
         public void onRemoveStream(MediaStream mediaStream) {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onRemoveStream");
         }
 
         @Override
         public void onDataChannel(DataChannel dataChannel) {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onDataChannel");
         }
 
         @Override
         public void onRenegotiationNeeded() {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onRenegotiationNeeded");
         }
 
         @Override
         public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
-
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onAddTrack");
         }
 
         @Override
         public void onTrack(RtpTransceiver transceiver) {
-
-        }
-    }
-
-    private class SDPObserver implements SdpObserver {
-        private final int type;
-        private final String liveStreamId;
-
-        SDPObserver(@ConnectionType int type, String liveStreamId) {
-            this.type = type;
-            this.liveStreamId = liveStreamId;
-        }
-
-        @Override
-        public void onCreateSuccess(SessionDescription sessionDescription) {
-            Log.d("HMfilterOkHttp", "SDPObserver#onCreateSuccess: " + sessionDescription.description);
-            peerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
-            if (type == ConnectionType.PRESENTER) {
-                connectionEvents.onPresenterSdp(peerConnection.getLocalDescription().description, liveStreamId);
-            } else if (type == ConnectionType.VIEWER) {
-                connectionEvents.onViewerSdp(peerConnection.getLocalDescription().description, liveStreamId);
-            }
-        }
-
-        @Override
-        public void onSetSuccess() {
-        }
-
-        @Override
-        public void onCreateFailure(String s) {
-            Log.d("HMfilterOkHttp", "SDPObserver#onCreateFailure s: " + s);
-        }
-
-        @Override
-        public void onSetFailure(String s) {
-            Log.d("HMfilterOkHttp", "SDPObserver#onSetFailure s: " + s);
+            Log.d("HMfilterOkHttp", "PeerConnectionObserver#onTrack");
         }
     }
 
     private class SimpleSdpObserver implements SdpObserver {
         @Override
         public void onCreateSuccess(SessionDescription sessionDescription) {
-            Log.d("HMfilterOkHttp", "SimpleSdpObserver#onCreateSuccess");
         }
 
         @Override
         public void onSetSuccess() {
-            Log.d("HMfilterOkHttp", "SimpleSdpObserver#onSetSuccess");
         }
 
         @Override
@@ -427,20 +432,12 @@ public class PeerConnectionClient {
     private class ConnectionListener implements PeerConnectionEvents.PeerConnectionEventsListener {
         @Override
         public void connected() {
-//            Log.d("HMfilterOkHttp", "ConnectionListener#connected");
-//
-//            MediaConstraints sdpMediaConstraints = new MediaConstraints();
-//            sdpMediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "false"));
-//            sdpMediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "false"));
-//
-//            peerConnection.createOffer(new SDPObserver(connectionType, liveStreamId), sdpMediaConstraints);
-            peerConnection.createOffer(new SDPObserver(connectionType, liveStreamId), mediaConstraints);
+            createOffer();
         }
 
         @Override
-        public void onRemoteSdp(String sdp) {
-            Log.d("HMfilterOkHttp", "ConnectionListener#onRemoteSdp: " + sdp);
-            peerConnection.setRemoteDescription(new SimpleSdpObserver(), new SessionDescription(ANSWER, sdp));
+        public void onRemoteSdp(String remoteSdp) {
+            setRemoteDescription(remoteSdp);
         }
 
         @Override
@@ -462,10 +459,4 @@ public class PeerConnectionClient {
         void onLocalVideoCapturerStopped();
     }
 
-    @IntDef({ConnectionType.PRESENTER, ConnectionType.VIEWER})
-    @Retention(RetentionPolicy.SOURCE)
-    public @interface ConnectionType {
-        int PRESENTER = 1000;
-        int VIEWER = 1001;
-    }
 }

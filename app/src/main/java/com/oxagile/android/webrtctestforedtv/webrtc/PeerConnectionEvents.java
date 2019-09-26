@@ -4,6 +4,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.gson.Gson;
+import com.oxagile.android.webrtctestforedtv.webrtc.constants.ConnectionType;
 import com.oxagile.android.webrtctestforedtv.webrtc.constants.MessageDataType;
 import com.oxagile.android.webrtctestforedtv.webrtc.model.Candidate;
 import com.oxagile.android.webrtctestforedtv.webrtc.model.Message;
@@ -13,8 +14,7 @@ import com.oxagile.android.webrtctestforedtv.webrtc.websocket.WebSocketConnectio
 import org.webrtc.IceCandidate;
 
 public class PeerConnectionEvents {
-    private static final String DEFAULT_WEB_SOCKET_URL = "wss://edtv-java.oxagile.com:8443/stream"; //todo will be remove
-//    private static final String DEFAULT_WEB_SOCKET_URL = "ws://192.168.33.38:8443/stream"; //todo will be remove
+    private static final String DEFAULT_WEB_SOCKET_URL = "wss://edtv-java-dev.oxagile.com:8443/stream"; //todo will be remove
 
     private static PeerConnectionEvents instance;
     private final Gson gson = new Gson();
@@ -70,6 +70,7 @@ public class PeerConnectionEvents {
     private void send(Message message) {
         if (isConnected) {
             String json = gson.toJson(message);
+            Log.d("HMfilterOkHttp", "PeerConnectionEvents#send messageId: " + message.getType());
             Log.d("HMfilterOkHttp", "PeerConnectionEvents#send json: " + json);
             webSocketConnection.sendMessage(json);
         } else if (listener != null) {
@@ -92,8 +93,9 @@ public class PeerConnectionEvents {
 
         @Override
         public void onMessage(String json) {
-            Log.d("HMfilterOkHttp", "ConnectionListener#onMessage json: " + json);
             Message message = gson.fromJson(json, Message.class);
+            Log.d("HMfilterOkHttp", "ConnectionListener#onMessage messageId: " + message.getType());
+            Log.d("HMfilterOkHttp", "ConnectionListener#onMessage json: " + json);
             switch (message.getType()) {
                 case MessageDataType.PRESENTER_RESPONSE:
                 case MessageDataType.VIEWER_RESPONSE:

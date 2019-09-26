@@ -5,28 +5,43 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
     <org.webrtc.SurfaceViewRenderer
         android:id="@+id/localSurfaceViewRenderer"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_gravity="center"/>
 
     <org.webrtc.SurfaceViewRenderer
         android:id="@+id/remoteSurfaceViewRenderer"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:visibility="gone"/>
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_gravity="center"/>
+    </LinearLayout>
 
     <Button
-        android:id="@+id/start_preview"
+        android:id="@+id/start_like_presenter"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center"
-        android:layout_marginBottom="20dp"
+        android:layout_gravity="bottom"
+        android:layout_margin="20dp"
         android:elevation="30dp"
-        android:text="@string/text_start_preview"
-        tools:visibility="visible"/>
+        android:text="@string/text_presenter"/>
+
+    <Button
+        android:id="@+id/start_like_viewer"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp"
+        android:elevation="30dp"
+        android:text="@string/text_viewer"/>
 
     <LinearLayout
         android:id="@+id/connection_control"
