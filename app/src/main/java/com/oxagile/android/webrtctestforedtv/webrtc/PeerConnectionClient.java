@@ -19,9 +19,11 @@ import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaConstraints;
 import org.webrtc.MediaStream;
+import org.webrtc.MediaStreamTrack;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
-import org.webrtc.RendererCommon;
+import org.webrtc.RtpReceiver;
+import org.webrtc.RtpTransceiver;
 import org.webrtc.SessionDescription;
 import org.webrtc.SurfaceTextureHelper;
 import org.webrtc.SurfaceViewRenderer;
@@ -49,8 +51,8 @@ public class PeerConnectionClient {
     private SurfaceTextureHelper surfaceTextureHelper;
     private VideoSource localVideoSource;
     private VideoCapturer videoCapturer;
-    private VideoTrack videoTrack;
-    private AudioTrack audioTrack;
+    private VideoTrack localVideoTrack;
+    private AudioTrack localAudioTrack;
 
     private PeerConnection peerConnection;
     private ConnectionType connectionType;
@@ -139,7 +141,7 @@ public class PeerConnectionClient {
         if (localSurfaceViewRenderer != null) {
             localSurfaceViewRenderer.setMirror(true);
             localSurfaceViewRenderer.setEnableHardwareScaler(true);
-            localSurfaceViewRenderer.init(rootEglBase.getEglBaseContext(), new RendererObserver(){
+            localSurfaceViewRenderer.init(rootEglBase.getEglBaseContext(), new RendererObserver() {
                 @Override
                 public void onFrameResolutionChanged(int videoWidth, int videoHeight, int rotation) {
                     Log.d("HMfilterOkHttp", "LocalFrameResolution: " + videoWidth + " x " + videoHeight);
@@ -149,12 +151,12 @@ public class PeerConnectionClient {
 
         if (remoteSurfaceViewRenderer != null) {
             remoteSurfaceViewRenderer.setEnableHardwareScaler(true);
-            remoteSurfaceViewRenderer.init(rootEglBase.getEglBaseContext(), new RendererObserver(){
+            remoteSurfaceViewRenderer.init(rootEglBase.getEglBaseContext(), new RendererObserver() {
                 @Override
                 public void onFrameResolutionChanged(int videoWidth, int videoHeight, int rotation) {
                     Log.d("HMfilterOkHttp", "RemoteFrameResolution: " + videoWidth + " x " + videoHeight);
                 }
-            }); //rendererEvents
+            });
         }
     }
 
@@ -169,13 +171,13 @@ public class PeerConnectionClient {
 //        videoCapturer.startCapture(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);//////////////////////////////////////////////////////////////////////////////////////////////////////
         videoCapturer.changeCaptureFormat(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);
         String localVideoTrackId = LOCAL_VIDEO_TRACK_ID + "_" + connectionType.name();
-        videoTrack = peerConnectionFactory.createVideoTrack(localVideoTrackId, localVideoSource);
-        videoTrack.addSink(localSurfaceViewRenderer);
+        localVideoTrack = peerConnectionFactory.createVideoTrack(localVideoTrackId, localVideoSource);
+        localVideoTrack.addSink(localSurfaceViewRenderer);
     }
 
     private void disposeLocalVideoTrack() {
-        if (videoTrack != null) {
-            videoTrack.dispose();
+        if (localVideoTrack != null) {
+            localVideoTrack.dispose();
         }
         if (videoCapturer != null) {
             videoCapturer.dispose();
@@ -189,40 +191,57 @@ public class PeerConnectionClient {
     }
 
     private void createLocalAudioTrack() {
-        AudioSource audioSource = peerConnectionFactory.createAudioSource(mediaConstraints);
+        AudioSource audioSource = peerConnectionFactory.createAudioSource(new MediaConstraints());
         String localVideoTrackId = LOCAL_AUDIO_TRACK_ID + "_" + connectionType.name();
-        audioTrack = peerConnectionFactory.createAudioTrack(localVideoTrackId, audioSource);
+        localAudioTrack = peerConnectionFactory.createAudioTrack(localVideoTrackId, audioSource);
     }
 
     private void createPeerConnection() {
-        peerConnection = peerConnectionFactory.createPeerConnection(IceServersUtils.getStunIceServers(), new PeerConnectionObserver(){
+        peerConnection = peerConnectionFactory.createPeerConnection(IceServersUtils.getStunIceServers(), new PeerConnectionObserver() {
             @Override
             public void onIceCandidate(IceCandidate iceCandidate) {
                 connectionEvents.onIceCandidate(iceCandidate);
             }
 
+//            @Override
+//            public void onAddStream(MediaStream mediaStream) {
+//                super.onAddStream(mediaStream);
+//                if (mediaStream != null && remoteSurfaceViewRenderer != null) {
+//                    mediaStream.videoTracks.get(0).addSink(remoteSurfaceViewRenderer);
+//                }
+//            }
+
             @Override
-            public void onAddStream(MediaStream mediaStream) {
-                if (mediaStream != null && remoteSurfaceViewRenderer != null) {
-                    mediaStream.videoTracks.get(0).addSink(remoteSurfaceViewRenderer);
+            public void onAddTrack(RtpReceiver receiver, MediaStream[] mediaStreams) {
+                MediaStreamTrack track = receiver.track();
+                if (track instanceof VideoTrack) {
+                    track.setEnabled(true);
+                    ((VideoTrack) track).addSink(remoteSurfaceViewRenderer);
                 }
             }
         });
-
-        String labelOfLocalMediaStream = LABEL_OF_LOCAL_MEDIA_STREAM + "_" + connectionType.name();
-        MediaStream localMediaStream = peerConnectionFactory.createLocalMediaStream(labelOfLocalMediaStream);
-
-        localMediaStream.addTrack(videoTrack);
-        localMediaStream.addTrack(audioTrack);
-
         if (peerConnection != null) {
-            peerConnection.addStream(localMediaStream);
+//            String labelOfLocalMediaStream = LABEL_OF_LOCAL_MEDIA_STREAM + "_" + connectionType.name();
+//            MediaStream localMediaStream = peerConnectionFactory.createLocalMediaStream(labelOfLocalMediaStream);
+//
+//            localMediaStream.addTrack(localVideoTrack);
+//            localMediaStream.addTrack(localAudioTrack);
+//
+//            peerConnection.addStream(localMediaStream);
+
+            localVideoTrack.setEnabled(true);
+            peerConnection.addTrack(localVideoTrack);
+            peerConnection.addTrack(localAudioTrack);
+
             connectionEvents.connect(null);
         }
     }
 
     private void createOffer() {
-        peerConnection.createOffer(new SimpleSdpObserver(){
+        String strBool = connectionType == ConnectionType.PRESENTER ? "false" : "true";
+        mediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", strBool));
+
+        peerConnection.createOffer(new SimpleSdpObserver() {
             @Override
             public void onCreateSuccess(SessionDescription sessionDescription) {
                 setLocalDescription(sessionDescription);
@@ -231,7 +250,7 @@ public class PeerConnectionClient {
     }
 
     private void setLocalDescription(SessionDescription sessionDescription) {
-        peerConnection.setLocalDescription(new SimpleSdpObserver(){
+        peerConnection.setLocalDescription(new SimpleSdpObserver() {
             @Override
             public void onSetSuccess() {
                 sendLocalDescription();
@@ -274,6 +293,6 @@ public class PeerConnectionClient {
     }
 
     public interface PeerConnectionClientListener {
-        void onCapturerSuccessStarted();
+
     }
 }

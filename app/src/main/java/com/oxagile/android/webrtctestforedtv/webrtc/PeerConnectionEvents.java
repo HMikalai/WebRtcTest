@@ -13,6 +13,8 @@ import com.oxagile.android.webrtctestforedtv.webrtc.websocket.WebSocketConnectio
 
 import org.webrtc.IceCandidate;
 
+import java.util.UUID;
+
 public class PeerConnectionEvents {
     private static final String DEFAULT_WEB_SOCKET_URL = "wss://edtv-java-dev.oxagile.com:8443/stream"; //todo will be remove
 
@@ -49,12 +51,12 @@ public class PeerConnectionEvents {
     }
 
     public void onPresenterSdp(String sdpOffer, String liveStreamId) {
-        Message message = new Message(MessageDataType.PRESENTER, sdpOffer, "1234", liveStreamId);
+        Message message = new Message(MessageDataType.PRESENTER, sdpOffer, UUID.randomUUID().toString(), liveStreamId);
         send(message);
     }
 
     public void onViewerSdp(String sdpOffer, String liveStreamId) {
-        Message message = new Message(MessageDataType.VIEWER, sdpOffer, "1234", liveStreamId);
+        Message message = new Message(MessageDataType.VIEWER, sdpOffer, UUID.randomUUID().toString(), liveStreamId);
         send(message);
     }
 

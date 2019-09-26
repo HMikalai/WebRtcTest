@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
         startLikeViewer.setOnClickListener(v -> startLikeViewer());
 
         changeCamera = findViewById(R.id.change_camera);
-//        changeCamera.setOnClickListener(v -> peerConnectionClient.changeCamera());
+        changeCamera.setOnClickListener(v -> peerConnectionClient.changeCamera());
 
         connectionControl = findViewById(R.id.connection_control);
         liveStreamId = findViewById(R.id.live_stream_id);
