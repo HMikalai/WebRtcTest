@@ -29,6 +29,9 @@ public class MainActivity extends AppCompatActivity {
     private Button startStream;
     private Button connectToStream;
 
+    private SurfaceViewRenderer localSurfaceViewRenderer;
+    private SurfaceViewRenderer remoteSurfaceViewRenderer;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,8 +59,8 @@ public class MainActivity extends AppCompatActivity {
         Button closeWebSocket = findViewById(R.id.close_websocket);
         closeWebSocket.setOnClickListener(v -> peerConnectionClient.closeConnection());
 
-        SurfaceViewRenderer localSurfaceViewRenderer = findViewById(R.id.localSurfaceViewRenderer);
-        SurfaceViewRenderer remoteSurfaceViewRenderer = findViewById(R.id.remoteSurfaceViewRenderer);
+        localSurfaceViewRenderer = findViewById(R.id.localSurfaceViewRenderer);
+        remoteSurfaceViewRenderer = findViewById(R.id.remoteSurfaceViewRenderer);
         startWedRtc(localSurfaceViewRenderer, remoteSurfaceViewRenderer);
     }
 
@@ -69,6 +72,9 @@ public class MainActivity extends AppCompatActivity {
         connectionControl.setVisibility(View.VISIBLE);
 
         peerConnectionClient.startLikePresenter();
+
+        localSurfaceViewRenderer.setVisibility(View.VISIBLE);
+        remoteSurfaceViewRenderer.setVisibility(View.GONE);
     }
 
     private void startLikeViewer(){
@@ -79,26 +85,13 @@ public class MainActivity extends AppCompatActivity {
         connectionControl.setVisibility(View.VISIBLE);
 
         peerConnectionClient.startLikeViewer();
+
+        localSurfaceViewRenderer.setVisibility(View.GONE);
+        remoteSurfaceViewRenderer.setVisibility(View.VISIBLE);
     }
 
     private void startWedRtc(SurfaceViewRenderer localSurfaceViewRenderer, SurfaceViewRenderer remoteSurfaceViewRenderer) {
-        peerConnectionClient = new PeerConnectionClient(localSurfaceViewRenderer, remoteSurfaceViewRenderer, new PeerConnectionClient.PeerConnectionClientListener() {
-            @Override
-            public void onLocalVideoCapturerStarted() {
-                runOnUiThread(() -> {
-//                    changeCamera.setVisibility(View.VISIBLE);
-//                    connectionControl.setVisibility(View.VISIBLE);
-                });
-            }
-
-            @Override
-            public void onLocalVideoCapturerStopped() {
-                runOnUiThread(() -> {
-//                    changeCamera.setVisibility(View.GONE);
-//                    connectionControl.setVisibility(View.GONE);
-                });
-            }
-        });
+        peerConnectionClient = new PeerConnectionClient(localSurfaceViewRenderer, remoteSurfaceViewRenderer);
     }
 
 

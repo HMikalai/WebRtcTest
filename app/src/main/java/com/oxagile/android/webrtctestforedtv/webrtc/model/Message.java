@@ -36,7 +36,7 @@ public class Message {
     }
 
     public Message(Candidate candidate) {
-        this.type = MessageDataType.ICE_CANDIDATE;
+        this.type = MessageDataType.ICE_CANDIDATE_FOR_SEND;
         this.candidate = candidate;
     }
 

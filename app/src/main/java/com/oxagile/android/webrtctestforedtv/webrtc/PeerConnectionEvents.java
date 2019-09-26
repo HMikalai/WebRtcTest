@@ -103,7 +103,7 @@ public class PeerConnectionEvents {
                         listener.onRemoteSdp(message.getSdpAnswer());
                     }
                     break;
-                case MessageDataType.ICE_CANDIDATE:
+                case MessageDataType.ICE_CANDIDATE_FOR_RECEIVE:
                     if(listener != null) {
                         listener.onRemoteIceCandidate(message.getCandidate());
                     }

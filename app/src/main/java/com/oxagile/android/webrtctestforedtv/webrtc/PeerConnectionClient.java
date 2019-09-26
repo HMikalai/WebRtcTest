@@ -48,7 +48,6 @@ public class PeerConnectionClient {
 
     private final SurfaceViewRenderer localSurfaceViewRenderer;
     private final SurfaceViewRenderer remoteSurfaceViewRenderer;
-    private final PeerConnectionClientListener peerConnectionClientListener;
 
     private final EglBase rootEglBase;
     private final Context appContext;
@@ -71,8 +70,7 @@ public class PeerConnectionClient {
     private final MediaConstraints mediaConstraints = new MediaConstraints();
 
     public PeerConnectionClient(SurfaceViewRenderer localSurfaceViewRenderer,
-                                SurfaceViewRenderer remoteSurfaceViewRenderer,
-                                PeerConnectionClientListener peerConnectionClientListener) {
+                                SurfaceViewRenderer remoteSurfaceViewRenderer) {
         Context context = null;
         if (localSurfaceViewRenderer != null && localSurfaceViewRenderer.getContext() != null) {
             context = localSurfaceViewRenderer.getContext();
@@ -86,7 +84,6 @@ public class PeerConnectionClient {
         this.localSurfaceViewRenderer = localSurfaceViewRenderer;
         this.remoteSurfaceViewRenderer = remoteSurfaceViewRenderer;
 
-        this.peerConnectionClientListener = peerConnectionClientListener;
         rootEglBase = EglBase.create();
         this.appContext = context.getApplicationContext();
 
@@ -169,10 +166,10 @@ public class PeerConnectionClient {
         surfaceTextureHelper = SurfaceTextureHelper.create(threadName, rootEglBase.getEglBaseContext());
 
         videoCapturer = Utils.createVideoCapture(appContext, frontCamera);//choosing of front/back camera is here
-        videoCapturer.initialize(surfaceTextureHelper, appContext, new VideoCaptureObserver(localVideoSource.getCapturerObserver()));
+        videoCapturer.initialize(surfaceTextureHelper, appContext, localVideoSource.getCapturerObserver());
 
-        videoCapturer.startCapture(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);//////////////////////////////////////////////////////////////////////////////////////////////////////
-//        videoCapturer.changeCaptureFormat(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);
+//        videoCapturer.startCapture(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);//////////////////////////////////////////////////////////////////////////////////////////////////////
+        videoCapturer.changeCaptureFormat(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);
         String localVideoTrackId = LOCAL_VIDEO_TRACK_ID + "_" + connectionType.name();
         videoTrack = peerConnectionFactory.createVideoTrack(localVideoTrackId, localVideoSource);
         videoTrack.addSink(surfaceViewRenderer);
@@ -310,35 +307,6 @@ public class PeerConnectionClient {
             iceServers.add(PeerConnection.IceServer.builder("stun:stun3.l.google.com:19302").createIceServer());
             iceServers.add(PeerConnection.IceServer.builder("stun:stun4.l.google.com:19302").createIceServer());
             return iceServers;
-        }
-    }
-
-    private class VideoCaptureObserver implements CapturerObserver {
-        private final CapturerObserver capturerObserver;
-
-        VideoCaptureObserver(CapturerObserver capturerObserver) {
-            this.capturerObserver = capturerObserver;
-        }
-
-        @Override
-        public void onCapturerStarted(boolean success) {
-            if (success && peerConnectionClientListener != null) {
-                peerConnectionClientListener.onLocalVideoCapturerStarted();
-            }
-            capturerObserver.onCapturerStarted(success);
-        }
-
-        @Override
-        public void onCapturerStopped() {
-            if (peerConnectionClientListener != null) {
-                peerConnectionClientListener.onLocalVideoCapturerStopped();
-            }
-            capturerObserver.onCapturerStopped();
-        }
-
-        @Override
-        public void onFrameCaptured(VideoFrame frame) {
-            capturerObserver.onFrameCaptured(frame);
         }
     }
 
