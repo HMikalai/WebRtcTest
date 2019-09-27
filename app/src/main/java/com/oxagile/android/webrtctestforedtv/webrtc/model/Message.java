@@ -21,7 +21,7 @@ public class Message {
     @SerializedName("sdpAnswer")
     private String sdpAnswer;
 
-    //MessageDataType.ICE_CANDIDATE
+    //MessageDataType.ICE_CANDIDATE_FOR_SEND or MessageDataType.ICE_CANDIDATE_FOR_RECEIVE
     @SerializedName("candidate")
     private Candidate candidate;
 

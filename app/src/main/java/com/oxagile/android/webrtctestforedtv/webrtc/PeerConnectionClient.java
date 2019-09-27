@@ -19,11 +19,8 @@ import org.webrtc.EglBase;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaConstraints;
 import org.webrtc.MediaStream;
-import org.webrtc.MediaStreamTrack;
 import org.webrtc.PeerConnection;
 import org.webrtc.PeerConnectionFactory;
-import org.webrtc.RtpReceiver;
-import org.webrtc.RtpTransceiver;
 import org.webrtc.SessionDescription;
 import org.webrtc.SurfaceTextureHelper;
 import org.webrtc.SurfaceViewRenderer;
@@ -31,11 +28,13 @@ import org.webrtc.VideoCapturer;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 
+import java.util.UUID;
+
 import static org.webrtc.SessionDescription.Type.ANSWER;
 
 public class PeerConnectionClient {
-    private static final int VIDEO_RESOLUTION_WIDTH = 1920;
-    private static final int VIDEO_RESOLUTION_HEIGHT = 1080;
+    private static final int VIDEO_RESOLUTION_WIDTH = 1080;
+    private static final int VIDEO_RESOLUTION_HEIGHT = 1920;
     private static final int FPS = 30;
     private static final String LOCAL_VIDEO_TRACK_ID = "localVideoTrackId";
     private static final String LOCAL_AUDIO_TRACK_ID = "localAudioId";
@@ -53,10 +52,13 @@ public class PeerConnectionClient {
     private VideoCapturer videoCapturer;
     private VideoTrack localVideoTrack;
     private AudioTrack localAudioTrack;
+    private MediaStream localMediaStream;
 
     private PeerConnection peerConnection;
     private ConnectionType connectionType;
     private String liveStreamId;
+
+    private final String userId = UUID.randomUUID().toString(); // will be remove.
 
     private PeerConnectionEvents connectionEvents = PeerConnectionEvents.getInstance();
 
@@ -91,20 +93,24 @@ public class PeerConnectionClient {
 
     public void startLikePresenter() {
         connectionType = ConnectionType.PRESENTER;
-        createLocalVideoTrack();//here preview will be start
+        createLocalVideoTrack(frontCamera);//here preview will be start
         createLocalAudioTrack();
     }
 
     public void startLikeViewer() {
         connectionType = ConnectionType.VIEWER;
-        createLocalVideoTrack();//here preview will be start
+        createLocalVideoTrack(frontCamera);//here preview will be start
         createLocalAudioTrack();
     }
 
     public void changeCamera() {
-        frontCamera = !frontCamera;
-        disposeLocalVideoTrack();
-        createLocalVideoTrack();
+        if(peerConnection != null) {
+            localMediaStream.removeTrack(localVideoTrack);
+            disposeLocalVideoTrack();
+            frontCamera = !frontCamera;
+            createLocalVideoTrack(frontCamera);
+            localMediaStream.addTrack(localVideoTrack);
+        }
     }
 
     public void connect(String liveStreamId) {
@@ -139,7 +145,7 @@ public class PeerConnectionClient {
 
     private void initSurfaceViews() {
         if (localSurfaceViewRenderer != null) {
-            localSurfaceViewRenderer.setMirror(true);
+//            localSurfaceViewRenderer.setMirror(true);
             localSurfaceViewRenderer.setEnableHardwareScaler(true);
             localSurfaceViewRenderer.init(rootEglBase.getEglBaseContext(), new RendererObserver() {
                 @Override
@@ -160,8 +166,8 @@ public class PeerConnectionClient {
         }
     }
 
-    private void createLocalVideoTrack() {
-        localVideoSource = peerConnectionFactory.createVideoSource(true);//if true - video resolution will change dynamically
+    private void createLocalVideoTrack(boolean frontCamera) {
+        localVideoSource = peerConnectionFactory.createVideoSource(false);//if false - video resolution will change dynamically
         String threadName = Thread.currentThread().getName();
         surfaceTextureHelper = SurfaceTextureHelper.create(threadName, rootEglBase.getEglBaseContext());
 
@@ -192,8 +198,8 @@ public class PeerConnectionClient {
 
     private void createLocalAudioTrack() {
         AudioSource audioSource = peerConnectionFactory.createAudioSource(new MediaConstraints());
-        String localVideoTrackId = LOCAL_AUDIO_TRACK_ID + "_" + connectionType.name();
-        localAudioTrack = peerConnectionFactory.createAudioTrack(localVideoTrackId, audioSource);
+        localAudioTrack = peerConnectionFactory.createAudioTrack(LOCAL_AUDIO_TRACK_ID, audioSource);
+        localAudioTrack.setVolume(10);
     }
 
     private void createPeerConnection() {
@@ -203,35 +209,42 @@ public class PeerConnectionClient {
                 connectionEvents.onIceCandidate(iceCandidate);
             }
 
-//            @Override
-//            public void onAddStream(MediaStream mediaStream) {
-//                super.onAddStream(mediaStream);
-//                if (mediaStream != null && remoteSurfaceViewRenderer != null) {
-//                    mediaStream.videoTracks.get(0).addSink(remoteSurfaceViewRenderer);
-//                }
-//            }
-
             @Override
-            public void onAddTrack(RtpReceiver receiver, MediaStream[] mediaStreams) {
-                MediaStreamTrack track = receiver.track();
-                if (track instanceof VideoTrack) {
-                    track.setEnabled(true);
-                    ((VideoTrack) track).addSink(remoteSurfaceViewRenderer);
+            public void onAddStream(MediaStream mediaStream) {
+                super.onAddStream(mediaStream);
+                if (remoteSurfaceViewRenderer != null && mediaStream != null) {
+                    if (mediaStream.videoTracks != null && !mediaStream.videoTracks.isEmpty() && mediaStream.videoTracks.get(0) != null) {
+                        VideoTrack remoteVideoTrack = mediaStream.videoTracks.get(0);
+                        remoteVideoTrack.addSink(remoteSurfaceViewRenderer);
+                    }
+                    if(mediaStream.audioTracks != null && !mediaStream.audioTracks.isEmpty() && mediaStream.audioTracks.get(0) != null) {
+                        AudioTrack remoteAudioTrack = mediaStream.audioTracks.get(0);
+                        remoteAudioTrack.setVolume(10);
+                    }
                 }
             }
+
+
+//            @Override
+//            public void onAddTrack(RtpReceiver receiver, MediaStream[] mediaStreams) {
+//                MediaStreamTrack track = receiver.track();
+//                if (track instanceof VideoTrack) {
+//                    track.setEnabled(true);
+//                    ((VideoTrack) track).addSink(remoteSurfaceViewRenderer);
+//                }
+//            }
         });
         if (peerConnection != null) {
-//            String labelOfLocalMediaStream = LABEL_OF_LOCAL_MEDIA_STREAM + "_" + connectionType.name();
-//            MediaStream localMediaStream = peerConnectionFactory.createLocalMediaStream(labelOfLocalMediaStream);
-//
-//            localMediaStream.addTrack(localVideoTrack);
-//            localMediaStream.addTrack(localAudioTrack);
-//
-//            peerConnection.addStream(localMediaStream);
+            localMediaStream = peerConnectionFactory.createLocalMediaStream(LABEL_OF_LOCAL_MEDIA_STREAM);
 
-            localVideoTrack.setEnabled(true);
-            peerConnection.addTrack(localVideoTrack);
-            peerConnection.addTrack(localAudioTrack);
+            localMediaStream.addTrack(localVideoTrack);
+            localMediaStream.addTrack(localAudioTrack);
+
+            peerConnection.addStream(localMediaStream);
+
+//            localVideoTrack.setEnabled(true);
+//            peerConnection.addTrack(localVideoTrack);
+//            peerConnection.addTrack(localAudioTrack);
 
             connectionEvents.connect(null);
         }
@@ -264,9 +277,9 @@ public class PeerConnectionClient {
 
     private void sendLocalDescription() {
         if (connectionType == ConnectionType.PRESENTER) {
-            connectionEvents.onPresenterSdp(peerConnection.getLocalDescription().description, liveStreamId);
+            connectionEvents.onPresenterSdp(peerConnection.getLocalDescription().description, userId, liveStreamId);
         } else if (connectionType == ConnectionType.VIEWER) {
-            connectionEvents.onViewerSdp(peerConnection.getLocalDescription().description, liveStreamId);
+            connectionEvents.onViewerSdp(peerConnection.getLocalDescription().description, userId, liveStreamId);
         }
     }
 
@@ -290,9 +303,5 @@ public class PeerConnectionClient {
         @Override
         public void notConnected() {
         }
-    }
-
-    public interface PeerConnectionClientListener {
-
     }
 }

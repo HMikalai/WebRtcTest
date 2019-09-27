@@ -1,10 +1,8 @@
 package com.oxagile.android.webrtctestforedtv.webrtc;
 
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.google.gson.Gson;
-import com.oxagile.android.webrtctestforedtv.webrtc.constants.ConnectionType;
 import com.oxagile.android.webrtctestforedtv.webrtc.constants.MessageDataType;
 import com.oxagile.android.webrtctestforedtv.webrtc.model.Candidate;
 import com.oxagile.android.webrtctestforedtv.webrtc.model.Message;
@@ -12,8 +10,6 @@ import com.oxagile.android.webrtctestforedtv.webrtc.websocket.WebSocketConnectio
 import com.oxagile.android.webrtctestforedtv.webrtc.websocket.WebSocketConnectionListener;
 
 import org.webrtc.IceCandidate;
-
-import java.util.UUID;
 
 public class PeerConnectionEvents {
     private static final String DEFAULT_WEB_SOCKET_URL = "wss://edtv-java-dev.oxagile.com:8443/stream"; //todo will be remove
@@ -50,13 +46,13 @@ public class PeerConnectionEvents {
         }
     }
 
-    public void onPresenterSdp(String sdpOffer, String liveStreamId) {
-        Message message = new Message(MessageDataType.PRESENTER, sdpOffer, UUID.randomUUID().toString(), liveStreamId);
+    public void onPresenterSdp(String sdpOffer, String userId, String liveStreamId) {
+        Message message = new Message(MessageDataType.PRESENTER, sdpOffer, userId, liveStreamId);
         send(message);
     }
 
-    public void onViewerSdp(String sdpOffer, String liveStreamId) {
-        Message message = new Message(MessageDataType.VIEWER, sdpOffer, UUID.randomUUID().toString(), liveStreamId);
+    public void onViewerSdp(String sdpOffer, String userId, String liveStreamId) {
+        Message message = new Message(MessageDataType.VIEWER, sdpOffer, userId, liveStreamId);
         send(message);
     }
 
